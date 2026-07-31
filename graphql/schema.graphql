@@ -1,0 +1,134 @@
+"A directive to secure fields using Laravel Passport authentication."
+directive @guard(guards: [String!] = ["api"]) on FIELD_DEFINITION
+
+"Can be used as an argument to specify the page size and current page for pagination."
+input PaginationInput {
+    page: Int
+    first: Int
+}
+
+"User account entity."
+type User {
+    id: ID!
+    name: String!
+    username: String!
+    email: String!
+    created_at: String!
+    updated_at: String!
+}
+
+"Employee entity."
+type Employee {
+    id: ID!
+    first_name: String!
+    last_name: String!
+    email: String!
+    phone: String
+    address: String
+    salary: Float!
+    created_at: String!
+    updated_at: String!
+    deleted_at: String
+}
+
+"Paginator info for paginated lists."
+type PaginatorInfo {
+    count: Int!
+    currentPage: Int!
+    firstItem: Int
+    hasMorePages: Boolean!
+    lastItem: Int
+    lastPage: Int!
+    perPage: Int!
+    total: Int!
+}
+
+"Paginated list of employees."
+type EmployeePaginator {
+    paginatorInfo: PaginatorInfo!
+    data: [Employee!]!
+}
+
+"Authentication payload containing OAuth Passport Access Token."
+type AuthPayload {
+    access_token: String!
+    token_type: String!
+    user: User!
+}
+
+"Result of batch employee creation."
+type BatchResult {
+    success: Boolean!
+    count: Int!
+    message: String!
+}
+
+"Result of CSV import execution."
+type ImportResult {
+    success: Boolean!
+    processed_rows: Int!
+    skipped_rows: Int!
+    errors: [String!]
+    message: String!
+}
+
+"Input for creating an employee."
+input CreateEmployeeInput {
+    first_name: String!
+    last_name: String!
+    email: String!
+    phone: String
+    address: String
+    salary: Float!
+}
+
+"Input for updating an employee."
+input UpdateEmployeeInput {
+    first_name: String
+    last_name: String
+    email: String
+    phone: String
+    address: String
+    salary: Float
+}
+
+type Query {
+    "Get authenticated user."
+    me: User @guard @field(resolver: "App\\GraphQL\\Queries\\AuthQueries@me")
+
+    "Get paginated list of employees with optional search."
+    employees(
+        first: Int = 15
+        page: Int = 1
+        search: String
+    ): EmployeePaginator @guard @field(resolver: "App\\GraphQL\\Queries\\EmployeeQueries@index")
+
+    "Get single employee by ID."
+    employee(id: ID!): Employee @guard @field(resolver: "App\\GraphQL\\Queries\\EmployeeQueries@show")
+}
+
+type Mutation {
+    "Login user with username and password using Passport."
+    login(username: String!, password: String!): AuthPayload @field(resolver: "App\\GraphQL\\Mutations\\AuthMutations@login")
+
+    "Create a new employee."
+    createEmployee(input: CreateEmployeeInput!): Employee @guard @field(resolver: "App\\GraphQL\\Mutations\\EmployeeMutations@create")
+
+    "Update existing employee by ID."
+    updateEmployee(id: ID!, input: UpdateEmployeeInput!): Employee @guard @field(resolver: "App\\GraphQL\\Mutations\\EmployeeMutations@update")
+
+    "Soft delete employee by ID."
+    deleteEmployee(id: ID!): Boolean @guard @field(resolver: "App\\GraphQL\\Mutations\\EmployeeMutations@delete")
+
+    "Restore soft deleted employee by ID."
+    restoreEmployee(id: ID!): Boolean @guard @field(resolver: "App\\GraphQL\\Mutations\\EmployeeMutations@restore")
+
+    "Permanently force delete employee by ID."
+    forceDeleteEmployee(id: ID!): Boolean @guard @field(resolver: "App\\GraphQL\\Mutations\\EmployeeMutations@forceDelete")
+
+    "Generate up to 10,000 employees using Faker."
+    generateFakerEmployees(count: Int = 10000): BatchResult @guard @field(resolver: "App\\GraphQL\\Mutations\\EmployeeMutations@generateFaker")
+
+    "Import/Update employees from uploaded CSV file."
+    importEmployees(file: Upload!): ImportResult @guard @field(resolver: "App\\GraphQL\\Mutations\\EmployeeMutations@importCsv")
+}
